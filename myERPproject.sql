@@ -74,6 +74,7 @@ SELECT * FROM Roles
 SELECT * FROM User_roles
 SELECT * FROM Audit_log
 
+  -- CURATAREA SPATIILOR LIBERE DIN STANGA SI DREAPTA
 UPDATE USERS 
   SET username= TRIM(username),
    full_name= TRIM(full_name),
@@ -83,9 +84,10 @@ UPDATE Audit_log
   SET action_type = TRIM(Action_type),
   table_name = TRIM(table_name)
   
+  -- IDENTIFICAREA DUPLICATELOR DUPA COMBINATIA COLOANELOR CARE SUNT DIFERITE
   WITH CTE_DUPLICATES AS (
 SELECT *, ROW_NUMBER() OVER(PARTITION BY user_id, action_type, timestamp) AS ROW_NUM FROM Audit_log)
-
+-- ELIMINAREA DUPLICARELOR
 DELETE FROM Audit_log
   WHERE log_id IN (SELECT log_id  FROM CTE_DUPLICATES WHERE ROW_NUM>1)
   
@@ -98,7 +100,7 @@ SELECT SUBSTRING(FULL_NAME, LOCATE(' ',FULL_NAME)+1)
   ALTER TABLE User
   ADD first_name VARCHAR(50),
   ADD last_name VARCHAR(50);
-
+-- SEPARAREA NUMELOR UTILIZATORILOR
   UPDATE USER
   SET first_name=TRIM(SUBSTRING(FULL_NAME,1, LOCATE(' ',FULL_NAME))),
   last_name=SUBSTRING(FULL_NAME, LOCATE(' ',FULL_NAME)+1);
@@ -108,7 +110,8 @@ FROM Audit_log Audit_log_empty
 JOIN Audit_log Audit_log_value
 ON Audit_log_empty.action_type=Audit_log_empty.action_type
 AND Audit_log_empty.log_id<>Audit_log_empty.log_id
-
+  
+-- COMPLETAREA DATELOR CARE SUNT NULE, PRIN FOLOSIREA COLOANELOR CU ACELEASI DATE, SI DETERMINA PE CELE NULE
 UPDATE Audit_log Audit_log_empty
 JOIN Audit_log Audit_log_value
 ON Audit_log_empty.action_type=Audit_log_empty.action_type
@@ -116,38 +119,43 @@ AND Audit_log_empty.log_id<>Audit_log_empty.log_id
   SET Audit_log_empty.table_name=IFNULL(Audit_log_empty.table_name,Audit_log_value.table_name)
 WHERE Audit_log_value.table_name IS NULL
 
--- SELECTING THE EMPLOYEES THAT MADE AN ACTION ACTION OUTSIDE OF WORKING TIME
-SELECT U.username, L.action_type, COUNT(L.timestamp) from Audit_log l
+-- SELECTAREA ANGAJAȚILOR ȘI A ACȚIUNILOR CARE AU FOST DESFĂȘURAT ÎN AFARA TIMPULUI DE MUNCA
+SELECT U.username, L.action_type, COUNT(L.timestamp) number_of_operations from Audit_log l
 JOIN USER u
 ON l.user_id=u.user_id
 where EXTRACT( HOUR FROM timestamp ) not BETWEEN 8 AND 18
 GROUP BY U.username, L.action_type
 ORDER BY U.username, L.action_type
 
-SELECT username, COUNT(action_type) from Audit_log l
+SELECT username, COUNT(action_type) as personal_operations from Audit_log l
 JOIN USER u
 ON l.user_id=u.user_id
 where EXTRACT( HOUR FROM timestamp ) not BETWEEN 8 AND 18
 group by username
 order by COUNT(action_type) DESC
-  
-SELECT distinct(username) from users 
+
+-- Selectarea utilizatorilor inactivi
+SELECT distinct(username) from user 
    JOIN Audit_log
-ON users.user_id=Audit_log.user_id
+ON user.user_id=Audit_log.user_id
 WHERE is_active=0
 
+  -- Operatiile zilnice realizate in total in tot timpul
+  WITH CTE_DAILY_OPERATIONS AS (
 SELECT EXTRACT(YEAR FROM timestamp) AS year, EXTRACT(MONTH FROM timestamp) AS month, 
-  EXTRACT(DAY FROM timestamp) AS day, count(action_type), (count(action_type)) OVER(), EXTRACT(MONTH FROM timestamp), 
-  EXTRACT(DAY FROM timestamp))
+  EXTRACT(DAY FROM timestamp) AS day, count(action_type) as operation_count
 from Audit_log
 group by EXTRACT(YEAR FROM timestamp), EXTRACT(MONTH FROM timestamp), EXTRACT(DAY FROM timestamp)
-order by EXTRACT(YEAR FROM timestamp), EXTRACT(MONTH FROM timestamp), EXTRACT(DAY FROM timestamp)
+order by EXTRACT(YEAR FROM timestamp), EXTRACT(MONTH FROM timestamp), EXTRACT(DAY FROM timestamp))
 
+  SELECT year, month, day, operation_count, SUM(operation_count) OVER(ORDER BY year, month, day) AS running_sum_of_operation
+  from cte_daily_operations
 SELECT user.user_id, user.full_name, MIN(user.deleted_at) deletion_time, MIN(Audit_log.timestamp) action_time FROM USER
   JOIN Audit_log
   WHERE Audit_log.timestamp>user.deleted_at
 GROUP BY user.user_id, user.full_name
 
+-- Actiuni lunare per departament, cu clasamentul departamentelor cu cele mai multe actiune pe luna
   WITH USER_role_name AS (
 WITH user_role AS (
 SELECT user.user_id, USER.username, USER.department, USER_ROLES.role_id FROM user
