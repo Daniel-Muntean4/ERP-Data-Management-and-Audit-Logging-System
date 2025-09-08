@@ -1,5 +1,5 @@
 # ERP-Data-Management-and-Audit-Logging-System  
-Built SQL scripts for data loading, cleaning, deduplication, and reporting to track user activity, enforce access control, and generate daily operational insights. Demonstrated ability to manage ERP-related data flows and ensure system integrity through structured queries and automation.  
+Am construit scripturi SQL pentru încărcarea, curățarea, deduplicarea și raportarea datelor pentru a urmări activitatea utilizatorilor, a impune controlul accesului și a genera informații operaționale zilnice. Capacitate demonstrată de a gestiona fluxurile de date legate de ERP și de a asigura integritatea sistemului prin interogări structurate și automatizare.
 ````markdown
 
 ```sql
