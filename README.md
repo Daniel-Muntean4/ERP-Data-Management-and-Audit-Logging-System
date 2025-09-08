@@ -42,7 +42,6 @@ order by EXTRACT(YEAR FROM timestamp), EXTRACT(MONTH FROM timestamp), EXTRACT(DA
   from cte_daily_operations
 
 ```
-
 <img width="1214" height="1144" alt="image" src="https://github.com/user-attachments/assets/7e7520d5-3877-4343-9bcd-a24c7ee1878c" />
 ```
 -- Actiuni lunare per departament, cu clasamentul departamentelor cu cele mai multe actiune pe luna
